@@ -3,23 +3,30 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Tool name and storage path
+-- Tool name and creation path
 local TOOL_NAME = "AimlockTool"
-local TOOL_STORAGE = ReplicatedStorage:WaitForChild("Tools") -- Assuming the tool is stored here
 
 -- Variables for the locked target and tool management
 local lockedTarget = nil
 local aimlockTool = nil
 local aimlockEnabled = false
 
--- Function to clone the tool into the player's backpack
-function giveAimlockTool()
-    local player = Players.LocalPlayer
-    local tool = TOOL_STORAGE:FindFirstChild(TOOL_NAME)
-    if tool then
-        local clonedTool = tool:Clone()
-        clonedTool.Parent = player.Backpack
-    end
+-- Function to create a new aimlock tool
+function createAimlockTool()
+    local tool = Instance.new("Tool")
+    tool.Name = TOOL_NAME
+    tool.RequiresHandle = true
+    tool.CanBeDropped = false
+    
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1, 1, 1) -- Adjust size as needed
+    handle.Anchored = false
+    handle.CanCollide = false
+    handle.Parent = tool
+    
+    tool.Parent = Players.LocalPlayer.Backpack
+    return tool
 end
 
 -- Function to get the player at the mouse position
@@ -49,7 +56,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if aimlockTool and aimlockTool.Parent then
+        if aimlockTool then
             if aimlockEnabled then
                 local player = getPlayerAtMouse()
                 if player then
@@ -65,7 +72,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        if aimlockTool and aimlockTool.Parent then
+        if aimlockTool then
             if lockedTarget then
                 clearLock()
             end
@@ -84,8 +91,10 @@ function aimlock()
 end
 
 -- Initialize the tool and aimlock
-giveAimlockTool()
 aimlockTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
+if not aimlockTool then
+    aimlockTool = createAimlockTool()
+end
 
 -- Continuous aimlock
 RunService.RenderStepped:Connect(function()
