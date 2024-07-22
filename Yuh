@@ -1,61 +1,126 @@
 -- Services
 local Players = game:GetService("Players")
-local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
 
 -- Configuration
-local DAMAGE_AMOUNT = 100 -- Amount of damage to deal
+local TOOL_NAME = "WebShooter"
+local WEB_COLOR = BrickColor.new("Bright blue")
+local WEB_MATERIAL = Enum.Material.Neon
+local WEB_EFFECT_LIFETIME = 1 -- seconds
+local MOVE_SPEED = 50 -- Speed at which player moves to the target
 
--- Function to create a server-side script for damaging players
-local function createDamageScript()
-    -- Check if the script already exists
-    local existingScript = ServerScriptService:FindFirstChild("DamageScript")
-    if existingScript then
-        return existingScript
+-- Function to create the web shooter tool
+local function createWebShooterTool()
+    -- Check if the tool already exists in the ReplicatedStorage
+    local existingTool = ReplicatedStorage:FindFirstChild(TOOL_NAME)
+    if existingTool then
+        return existingTool
     end
 
-    -- Create a new Script
-    local damageScript = Instance.new("Script")
-    damageScript.Name = "DamageScript"
-    damageScript.Source = [[
+    -- Create the tool
+    local tool = Instance.new("Tool")
+    tool.Name = TOOL_NAME
+    tool.RequiresHandle = true
+
+    -- Create the handle
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1, 1, 1)
+    handle.Anchored = false
+    handle.CanCollide = false
+    handle.BrickColor = BrickColor.new("Bright red")
+    handle.Material = Enum.Material.Metal
+    handle.Parent = tool
+
+    -- Add the tool to ReplicatedStorage
+    tool.Parent = ReplicatedStorage
+
+    -- Create the script for the tool
+    local script = Instance.new("Script")
+    script.Source = [[
         -- Services
         local Players = game:GetService("Players")
+        local TweenService = game:GetService("TweenService")
+        local Workspace = game:GetService("Workspace")
 
         -- Configuration
         local DAMAGE_AMOUNT = 100 -- Amount of damage to deal
 
-        -- Function to handle touch event
-        local function onTouch(otherPart)
-            local character = otherPart.Parent
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid and not Players:GetPlayerFromCharacter(character) then
-                humanoid:TakeDamage(DAMAGE_AMOUNT)
-            end
+        -- Tool
+        local tool = script.Parent
+        local player = Players.LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        local mouse = player:GetMouse()
+
+        -- Function to create web effect
+        local function createWebEffect(position)
+            local webEffect = Instance.new("Part")
+            webEffect.Size = Vector3.new(1, 1, 1)
+            webEffect.Anchored = true
+            webEffect.CanCollide = false
+            webEffect.BrickColor = BrickColor.new("Bright blue")
+            webEffect.Material = Enum.Material.Neon
+            webEffect.Position = position
+            webEffect.Parent = Workspace
+            game:GetService("Debris"):AddItem(webEffect, 1) -- Remove after 1 second
+
+            return webEffect
         end
 
-        -- Function to initialize damage system for a player
-        local function setupPlayer(player)
-            local character = player.Character or player.CharacterAdded:Wait()
-            local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+        -- Function to handle tool activation
+        local function onActivate()
+            local mouseHit = mouse.Hit
+            local targetPosition = mouseHit.Position
 
-            -- Connect the Touched event to the onTouch function
-            humanoidRootPart.Touched:Connect(onTouch)
-        end
+            -- Create web effect
+            createWebEffect(targetPosition)
 
-        -- Setup for existing players
-        for _, player in ipairs(Players:GetPlayers()) do
-            setupPlayer(player)
-        end
+            -- Calculate direction and distance
+            local direction = (targetPosition - humanoidRootPart.Position).unit
+            local distance = (targetPosition - humanoidRootPart.Position).magnitude
 
-        -- Setup for new players
-        Players.PlayerAdded:Connect(function(player)
-            player.CharacterAdded:Connect(function()
-                setupPlayer(player)
+            -- Tween for smooth movement
+            local tweenInfo = TweenInfo.new(distance / MOVE_SPEED, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+            local goal = {Position = targetPosition}
+            local tween = TweenService:Create(humanoidRootPart, tweenInfo, goal)
+            tween:Play()
+
+            -- Teleport to target position after the tween completes
+            tween.Completed:Connect(function()
+                humanoidRootPart.Position = targetPosition
             end)
-        end)
+        end
+
+        -- Connect the tool activation to the onActivate function
+        tool.Activated:Connect(onActivate)
     ]]
-    damageScript.Parent = ServerScriptService
-    return damageScript
+    script.Parent = tool
+
+    return tool
 end
 
--- Create or get the DamageScript
-createDamageScript()
+-- Function to equip the tool to a player
+local function equipTool(player)
+    local tool = ReplicatedStorage:FindFirstChild(TOOL_NAME)
+    if tool then
+        tool:Clone().Parent = player.Backpack
+    end
+end
+
+-- Create the web shooter tool
+createWebShooterTool()
+
+-- Equip tool to all players who join the game
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        equipTool(player)
+    end)
+end)
+
+-- Equip tool to existing players
+for _, player in ipairs(Players:GetPlayers()) do
+    equipTool(player)
+end
