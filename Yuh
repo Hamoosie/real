@@ -61,11 +61,13 @@ end
 -- Function to update ESP visibility
 function updateESP()
     local screenGui = Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
-    for _, child in ipairs(screenGui:GetChildren()) do
-        if child:IsA("Frame") and child.Name:match("^ESP_") then
-            child.Visible = espEnabled
-        elseif child:IsA("TextLabel") and child.Name:match("^NameTag_") then
-            child.Visible = espEnabled
+    if screenGui then
+        for _, child in ipairs(screenGui:GetChildren()) do
+            if child:IsA("Frame") and child.Name:match("^ESP_") then
+                child.Visible = espEnabled
+            elseif child:IsA("TextLabel") and child.Name:match("^NameTag_") then
+                child.Visible = espEnabled
+            end
         end
     end
 end
