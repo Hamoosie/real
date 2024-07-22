@@ -1,37 +1,36 @@
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 -- Configuration
 local ESPColor = Color3.fromRGB(255, 0, 0) -- Red color for outlines
 local NameColors = {Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 0, 255), Color3.fromRGB(255, 255, 0)} -- Different colors for names
-local NAME_SCALE = Vector3.new(0.5, 0.5, 0.5) -- Scale for name tags
+local NAME_SCALE = UDim2.new(0, 100, 0, 20) -- Size for name tags
 
 -- Function to create ESP for a player
 local function createESP(player)
     local character = player.Character
     if character then
         for _, part in ipairs(character:GetChildren()) do
-            if part:IsA("BasePart") and not part:FindFirstChild("ESPBox") then
-                local espBox = Instance.new("BoxHandleAdornment", part)
-                espBox.Name = "ESPBox"
-                espBox.Adornee = part
-                espBox.Size = part.Size
-                espBox.Color3 = ESPColor
-                espBox.Transparency = 0.5
-                espBox.AlwaysOnTop = true
-                espBox.ZIndex = 1
-                espBox.Visible = true
+            if part:IsA("BasePart") and not part:FindFirstChild("ESPOutline") then
+                -- Create an outline for each part
+                local outline = Instance.new("Highlight")
+                outline.Name = "ESPOutline"
+                outline.Adornee = part
+                outline.FillTransparency = 1
+                outline.OutlineColor = ESPColor
+                outline.Parent = part
             end
         end
 
         if not character:FindFirstChild("ESPNameTag") then
+            -- Create a billboard for the player's name
             local billBoard = Instance.new("BillboardGui", character)
             billBoard.Name = "ESPNameTag"
-            billBoard.Size = UDim2.new(0, 200, 0, 50)
+            billBoard.Size = NAME_SCALE
             billBoard.Adornee = character:FindFirstChild("Head")
             billBoard.AlwaysOnTop = true
+            billBoard.StudsOffset = Vector3.new(0, 2, 0) -- Adjust as needed
 
             local nameLabel = Instance.new("TextLabel", billBoard)
             nameLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -40,6 +39,7 @@ local function createESP(player)
             nameLabel.TextColor3 = NameColors[math.random(1, #NameColors)]
             nameLabel.TextScaled = true
             nameLabel.Font = Enum.Font.SourceSansBold
+            nameLabel.TextSize = 10 -- Smaller text size
         end
     end
 end
