@@ -12,8 +12,9 @@ fovCircle.Visible = true
 -- Maximum distance for targeting
 local maxDistance = 200 -- Adjust as needed
 
--- Toggle state
-local silentAimEnabled = true
+-- Toggle state and locked target
+local silentAimEnabled = false
+local lockedTarget = nil
 
 -- Create a toggle button
 local screenGui = Instance.new("ScreenGui")
@@ -25,11 +26,16 @@ toggleButton.Size = UDim2.new(0, 100, 0, 50)
 toggleButton.Position = UDim2.new(0, 10, 0.5, -25) -- Left side of the screen
 toggleButton.BackgroundColor3 = Color3.new(0, 0, 0)
 toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.Text = "Toggle Silent Aim"
+toggleButton.Text = "Enable Silent Aim"
 toggleButton.Parent = screenGui
 
 toggleButton.MouseButton1Click:Connect(function()
     silentAimEnabled = not silentAimEnabled
+    if silentAimEnabled and not lockedTarget then
+        lockedTarget = getClosestPlayerInFOV() -- Lock onto the first target
+    else
+        lockedTarget = nil -- Unlock target when disabling
+    end
     toggleButton.Text = silentAimEnabled and "Disable Silent Aim" or "Enable Silent Aim"
 end)
 
@@ -71,15 +77,12 @@ end
 
 -- Function to adjust aiming direction with prediction
 function silentAim()
-    if silentAimEnabled then
-        local target = getClosestPlayerInFOV()
-        if target then
-            local predictionTime = 0.2 -- Adjust prediction time as needed
-            local predictedPos = predictTargetPosition(target, predictionTime)
-            if predictedPos then
-                local cam = workspace.CurrentCamera
-                cam.CFrame = CFrame.new(cam.CFrame.Position, predictedPos)
-            end
+    if silentAimEnabled and lockedTarget then
+        local predictionTime = 0.6 -- Adjust prediction time as needed
+        local predictedPos = predictTargetPosition(lockedTarget, predictionTime)
+        if predictedPos then
+            local cam = workspace.CurrentCamera
+            cam.CFrame = CFrame.new(cam.CFrame.Position, predictedPos)
         end
     end
 end
