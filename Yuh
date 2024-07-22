@@ -29,10 +29,11 @@ function createAimlockTool()
     return tool
 end
 
--- Function to get the player at the mouse position
-function getPlayerAtMouse()
+-- Function to get the player at the touch position
+function getPlayerAtTouch(touchPosition)
     local mouse = Players.LocalPlayer:GetMouse()
-    local target = mouse.Target
+    local screenPoint = Vector2.new(touchPosition.X, touchPosition.Y)
+    local target = workspace:FindPartOnRay(workspace.CurrentCamera:ScreenPointToRay(screenPoint.X, screenPoint.Y), workspace)
     if target and target.Parent and target.Parent:FindFirstChild("Humanoid") then
         return Players:GetPlayerFromCharacter(target.Parent)
     end
@@ -51,14 +52,19 @@ function clearLock()
     lockedTarget = nil
 end
 
--- Handle tool activation and deactivation
+-- Handle touch and mouse input
 UIS.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         if aimlockTool then
             if aimlockEnabled then
-                local player = getPlayerAtMouse()
+                local player
+                if input.UserInputType == Enum.UserInputType.Touch then
+                    player = getPlayerAtTouch(input.Position)
+                else
+                    player = getPlayerAtTouch(Players.LocalPlayer:GetMouse().Hit.Position)
+                end
                 if player then
                     lockOnToPlayer(player)
                 end
@@ -67,11 +73,11 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- Handle tool visibility
+-- Handle clearing the lock
 UIS.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton2 then
         if aimlockTool then
             if lockedTarget then
                 clearLock()
