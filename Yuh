@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 -- Configuration
-local SPEED = 30
+local SPEED = 60
 local ANIMATION_ID = "rbxassetid://507766666" -- Replace with a superhero running animation ID
 local SPARK_COLOR = Color3.fromRGB(255, 255, 0) -- Yellow color for sparks
 local SPARK_TEXTURE = "rbxassetid://243660364" -- Replace with your desired spark texture
@@ -28,7 +28,7 @@ local function createSpark()
     spark.Lifetime = NumberRange.new(0.2, 0.5)
     spark.Speed = NumberRange.new(5, 10)
     spark.Acceleration = Vector3.new(0, -10, 0)
-    spark.Parent = character.PrimaryPart
+    spark.Parent = character:WaitForChild("HumanoidRootPart")
     return spark
 end
 
@@ -44,7 +44,7 @@ local function updateEffects(speed)
         if not animationTrack.IsPlaying then
             animationTrack:Play()
         end
-        if not character.PrimaryPart:FindFirstChild("SparkEffect") then
+        if not character:FindFirstChild("SparkEffect") then
             local spark = createSpark()
             spark.Name = "SparkEffect"
         end
@@ -53,8 +53,8 @@ local function updateEffects(speed)
         if animationTrack.IsPlaying then
             animationTrack:Stop()
         end
-        if character.PrimaryPart:FindFirstChild("SparkEffect") then
-            character.PrimaryPart.SparkEffect:Destroy()
+        if character:FindFirstChild("SparkEffect") then
+            character.SparkEffect:Destroy()
         end
     end
 end
