@@ -6,11 +6,12 @@ local UIS = game:GetService("UserInputService")
 -- Configuration
 local FOV_RADIUS = 100 -- Radius of the FOV circle
 local MAX_DISTANCE = 100 -- Maximum distance for locking onto players
+local AIMLOCK_BUTTON_SIZE = UDim2.new(0, 100, 0, 50) -- Size of the toggle button
 
 -- Variables
 local lockedTarget = nil
 local fovCircle = nil
-local aimlockEnabled = true -- Set to true to enable by default
+local aimlockEnabled = false -- Default to disabled
 
 -- Function to create the FOV circle
 function createFOVCircle()
@@ -23,6 +24,23 @@ function createFOVCircle()
     fovCircle.BorderSizePixel = 0
     fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
     fovCircle.Visible = aimlockEnabled
+end
+
+-- Function to create the enable/disable button
+function createToggleButton()
+    local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
+    local button = Instance.new("TextButton", screenGui)
+    button.Size = AIMLOCK_BUTTON_SIZE
+    button.Position = UDim2.new(0, 10, 0.5, -AIMLOCK_BUTTON_SIZE.Y.Offset / 2)
+    button.Text = "Toggle Aimlock"
+    button.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green color for the button
+    button.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
+
+    button.MouseButton1Click:Connect(function()
+        aimlockEnabled = not aimlockEnabled
+        fovCircle.Visible = aimlockEnabled
+        print("Aimlock " .. (aimlockEnabled and "enabled" or "disabled"))
+    end)
 end
 
 -- Function to get the player within the FOV circle
@@ -54,19 +72,12 @@ function getPlayerInFOV()
     return nil
 end
 
--- Function to handle shooting and bullet manipulation
+-- Function to handle shooting
 function onShoot()
     if aimlockEnabled and lockedTarget then
+        local cam = workspace.CurrentCamera
         local targetPosition = lockedTarget.Character.HumanoidRootPart.Position
-
-        -- Detect projectiles
-        for _, projectile in ipairs(workspace:FindPartsInRegion3(workspace.CurrentCamera.CFrame:ToWorldSpace(CFrame.new(targetPosition)).Position, Vector3.new(100, 100, 100), nil)) do
-            if projectile:IsA("BallSocketConstraint") or projectile:IsA("Attachment") then
-                -- Adjust bullet's trajectory to aim at the target
-                local direction = (targetPosition - projectile.Position).unit
-                projectile.Velocity = direction * projectile.Velocity.Magnitude
-            end
-        end
+        cam.CFrame = CFrame.new(cam.CFrame.Position, targetPosition)
     end
 end
 
@@ -83,36 +94,11 @@ function updateAimlock()
     end
 end
 
--- Toggle aimlock with touch input (left side to toggle, right side to clear)
-UIS.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-
-    if input.UserInputType == Enum.UserInputType.Touch then
-        local touchPos = UIS:GetTouchPositions()
-        if #touchPos > 0 then
-            local touch = touchPos[1]
-            if touch.Position.X < workspace.CurrentCamera.ViewportSize.X / 2 then
-                if not aimlockEnabled then
-                    aimlockEnabled = true
-                    fovCircle.Visible = true
-                    print("Aimlock enabled.")
-                else
-                    aimlockEnabled = false
-                    fovCircle.Visible = false
-                    print("Aimlock disabled.")
-                end
-            else
-                lockedTarget = nil
-                print("Lock cleared.")
-            end
-        end
-    end
-end)
-
--- Initialize the FOV circle
+-- Initialize the FOV circle and the toggle button
 createFOVCircle()
+createToggleButton()
 
--- Continuous aimlock and bullet manipulation
+-- Continuous aimlock and shooting logic
 RunService.RenderStepped:Connect(function()
     updateAimlock()
     onShoot()
