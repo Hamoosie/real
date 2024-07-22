@@ -21,6 +21,7 @@ function createFOVCircle()
     fovCircle.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red color for FOV circle
     fovCircle.BackgroundTransparency = 0.5
     fovCircle.BorderSizePixel = 0
+    fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
     fovCircle.Visible = aimlockEnabled
 end
 
@@ -53,22 +54,17 @@ function getPlayerInFOV()
     return nil
 end
 
--- Function to manipulate bullet trajectory
-function manipulateBullet(bullet, targetPosition)
-    -- Calculate direction to the target
-    local direction = (targetPosition - bullet.Position).unit
-    -- Set bullet's direction to the target
-    bullet.Velocity = direction * bullet.Velocity.Magnitude
-end
-
--- Function to handle shooting
+-- Function to handle shooting and bullet manipulation
 function onShoot()
     if aimlockEnabled and lockedTarget then
         local targetPosition = lockedTarget.Character.HumanoidRootPart.Position
-        -- Intercept and manipulate bullets
-        for _, bullet in ipairs(workspace:FindPartsInRegion3(workspace.CurrentCamera.CFrame:ToWorldSpace(CFrame.new(targetPosition)).Position, Vector3.new(100, 100, 100), nil)) do
-            if bullet:IsA("BallSocketConstraint") then
-                manipulateBullet(bullet, targetPosition)
+
+        -- Detect projectiles
+        for _, projectile in ipairs(workspace:FindPartsInRegion3(workspace.CurrentCamera.CFrame:ToWorldSpace(CFrame.new(targetPosition)).Position, Vector3.new(100, 100, 100), nil)) do
+            if projectile:IsA("BallSocketConstraint") or projectile:IsA("Attachment") then
+                -- Adjust bullet's trajectory to aim at the target
+                local direction = (targetPosition - projectile.Position).unit
+                projectile.Velocity = direction * projectile.Velocity.Magnitude
             end
         end
     end
@@ -87,17 +83,15 @@ function updateAimlock()
     end
 end
 
--- Toggle aimlock with a button press (e.g., Left Mouse Button)
+-- Toggle aimlock with touch input (left side to toggle, right side to clear)
 UIS.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
 
     if input.UserInputType == Enum.UserInputType.Touch then
-        -- Detect touch input for aimlock toggle
         local touchPos = UIS:GetTouchPositions()
         if #touchPos > 0 then
             local touch = touchPos[1]
             if touch.Position.X < workspace.CurrentCamera.ViewportSize.X / 2 then
-                -- Toggle aimlock on/off with a touch on the left side of the screen
                 if not aimlockEnabled then
                     aimlockEnabled = true
                     fovCircle.Visible = true
@@ -108,7 +102,6 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
                     print("Aimlock disabled.")
                 end
             else
-                -- Clear lock with a touch on the right side of the screen
                 lockedTarget = nil
                 print("Lock cleared.")
             end
