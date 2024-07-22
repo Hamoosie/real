@@ -59,14 +59,27 @@ function getClosestPlayerInFOV()
     return closestPlayer
 end
 
--- Function to adjust aiming direction
+-- Function to predict the future position of the target
+function predictTargetPosition(target, predictionTime)
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local targetPos = target.Character.HumanoidRootPart.Position
+        local targetVelocity = target.Character.HumanoidRootPart.Velocity
+        return targetPos + targetVelocity * predictionTime
+    end
+    return nil
+end
+
+-- Function to adjust aiming direction with prediction
 function silentAim()
     if silentAimEnabled then
         local target = getClosestPlayerInFOV()
-        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-            local targetPos = target.Character.HumanoidRootPart.Position
-            local cam = workspace.CurrentCamera
-            cam.CFrame = CFrame.new(cam.CFrame.Position, targetPos)
+        if target then
+            local predictionTime = 0.2 -- Adjust prediction time as needed
+            local predictedPos = predictTargetPosition(target, predictionTime)
+            if predictedPos then
+                local cam = workspace.CurrentCamera
+                cam.CFrame = CFrame.new(cam.CFrame.Position, predictedPos)
+            end
         end
     end
 end
