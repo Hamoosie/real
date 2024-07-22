@@ -1,17 +1,13 @@
 -- Services
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
+local InsertService = game:GetService("InsertService")
 
 -- Configuration
-local TOOL_NAME = "WebShooter"
-local WEB_COLOR = BrickColor.new("Bright blue")
-local WEB_MATERIAL = Enum.Material.Neon
-local WEB_EFFECT_LIFETIME = 1 -- seconds
-local MOVE_SPEED = 50 -- Speed at which player moves to the target
+local TOOL_NAME = "SpiderManSuit"
+local SUIT_ID = 1234567890 -- Replace this with the Asset ID of the Spider-Man suit you want to use
 
--- Function to create the web shooter tool
-local function createWebShooterTool()
+-- Function to create the Spider-Man suit tool
+local function createSpiderManSuitTool()
     -- Check if the tool already exists in the player's backpack
     local existingTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
     if existingTool then
@@ -41,62 +37,45 @@ local function createWebShooterTool()
     script.Source = [[
         -- Services
         local Players = game:GetService("Players")
-        local TweenService = game:GetService("TweenService")
-        local Workspace = game:GetService("Workspace")
-        local UserInputService = game:GetService("UserInputService")
+        local InsertService = game:GetService("InsertService")
+        local Debris = game:GetService("Debris")
 
         -- Configuration
-        local MOVE_SPEED = 50 -- Speed at which player moves to the target
+        local SUIT_ID = 1234567890 -- Replace this with the Asset ID of the Spider-Man suit you want to use
 
         -- Tool
         local tool = script.Parent
         local player = Players.LocalPlayer
         local character = player.Character or player.CharacterAdded:Wait()
-        local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
-        local mouse = player:GetMouse()
 
-        -- Function to create web effect
-        local function createWebEffect(position)
-            local webEffect = Instance.new("Part")
-            webEffect.Size = Vector3.new(1, 1, 1)
-            webEffect.Anchored = true
-            webEffect.CanCollide = false
-            webEffect.BrickColor = BrickColor.new("Bright blue")
-            webEffect.Material = Enum.Material.Neon
-            webEffect.Position = position
-            webEffect.Parent = Workspace
-            game:GetService("Debris"):AddItem(webEffect, 1) -- Remove after 1 second
+        -- Function to equip the Spider-Man suit
+        local function equipSuit()
+            -- Load the Spider-Man suit from InsertService
+            local suit = InsertService:LoadAsset(SUIT_ID)
 
-            return webEffect
+            -- Check if the suit was successfully loaded
+            if not suit then
+                warn("Failed to load Spider-Man suit")
+                return
+            end
+
+            -- Remove any existing suit parts (if applicable)
+            for _, part in ipairs(character:GetChildren()) do
+                if part:IsA("Clothing") then
+                    part:Destroy()
+                end
+            end
+
+            -- Parent the suit to the character
+            suit.Parent = character
+
+            -- Set a timeout to remove the suit after 10 seconds
+            Debris:AddItem(suit, 10)
         end
 
         -- Function to handle tool activation
         local function onActivate()
-            -- Wait for a touch input
-            local touchInput = UserInputService.TouchInputBegan:Wait()
-            if touchInput and touchInput.UserInputType == Enum.UserInputType.Touch then
-                local touchLocation = touchInput.Position
-                local screenPoint = workspace.CurrentCamera:ScreenToWorldPoint(Vector3.new(touchLocation.X, touchLocation.Y, 0))
-                local targetPosition = screenPoint
-
-                -- Create web effect
-                createWebEffect(targetPosition)
-
-                -- Calculate direction and distance
-                local direction = (targetPosition - humanoidRootPart.Position).unit
-                local distance = (targetPosition - humanoidRootPart.Position).magnitude
-
-                -- Tween for smooth movement
-                local tweenInfo = TweenInfo.new(distance / MOVE_SPEED, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-                local goal = {Position = targetPosition}
-                local tween = TweenService:Create(humanoidRootPart, tweenInfo, goal)
-                tween:Play()
-
-                -- Teleport to target position after the tween completes
-                tween.Completed:Connect(function()
-                    humanoidRootPart.Position = targetPosition
-                end)
-            end
+            equipSuit()
         end
 
         -- Connect the tool activation to the onActivate function
@@ -107,5 +86,5 @@ local function createWebShooterTool()
     return tool
 end
 
--- Create the web shooter tool
-createWebShooterTool()
+-- Create the Spider-Man suit tool
+createSpiderManSuitTool()
