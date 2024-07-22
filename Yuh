@@ -1,6 +1,7 @@
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 -- Configuration
 local HITBOX_SIZE = Vector3.new(10, 10, 10) -- Size of the hitbox box
@@ -43,6 +44,24 @@ local function createHitbox(player)
     RunService.RenderStepped:Connect(updateHitbox)
 end
 
+-- Function to check if a player is hit
+local function checkHit()
+    local mouse = Players.LocalPlayer:GetMouse()
+    local target = mouse.Target
+    if target and target:IsA("Part") and target.Name == "Hitbox" then
+        local player = Players:GetPlayers()
+        for _, p in ipairs(player) do
+            if p.Character and p.Character:FindFirstChild("Hitbox") == target then
+                -- Apply damage to the player (example)
+                local humanoid = p.Character:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:TakeDamage(10) -- Apply 10 damage (adjust as needed)
+                end
+            end
+        end
+    end
+end
+
 -- Create hitboxes for all players already in the game
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= Players.LocalPlayer then
@@ -65,3 +84,6 @@ Players.PlayerAdded:Connect(function(player)
         end)
     end
 end)
+
+-- Check for hits on the player's mouse click
+Players.LocalPlayer:GetMouse().Button1Down:Connect(checkHit)
