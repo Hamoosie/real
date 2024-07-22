@@ -23,11 +23,10 @@ function createFOVCircle()
     fovCircle.BackgroundTransparency = 0.5
     fovCircle.BorderSizePixel = 0
     fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-    fovCircle.ClipsDescendants = true
     
-    -- Create the circular mask
+    -- Create a circular shape
     local mask = Instance.new("UICorner", fovCircle)
-    mask.CornerRadius = UDim.new(0.5, 0) -- Creates the circular shape
+    mask.CornerRadius = UDim.new(0.5, 0) -- Circular shape
 end
 
 -- Function to create the enable/disable button
@@ -50,13 +49,13 @@ end
 -- Function to get the player within the FOV circle
 function getPlayerInFOV()
     local cam = workspace.CurrentCamera
-    local mousePos = UIS:GetMouseLocation()
     local playersInFOV = {}
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local charPos = cam:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
-            local dist = (Vector2.new(charPos.X, charPos.Y) - mousePos).Magnitude
+            local screenCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+            local dist = (Vector2.new(charPos.X, charPos.Y) - screenCenter).Magnitude
 
             if dist <= FOV_RADIUS then
                 local distanceToPlayer = (cam.CFrame.Position - player.Character.HumanoidRootPart.Position).magnitude
