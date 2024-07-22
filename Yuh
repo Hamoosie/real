@@ -1,6 +1,5 @@
 -- Services
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -13,8 +12,8 @@ local MOVE_SPEED = 50 -- Speed at which player moves to the target
 
 -- Function to create the web shooter tool
 local function createWebShooterTool()
-    -- Check if the tool already exists in the ReplicatedStorage
-    local existingTool = ReplicatedStorage:FindFirstChild(TOOL_NAME)
+    -- Check if the tool already exists
+    local existingTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
     if existingTool then
         return existingTool
     end
@@ -34,8 +33,8 @@ local function createWebShooterTool()
     handle.Material = Enum.Material.Metal
     handle.Parent = tool
 
-    -- Add the tool to ReplicatedStorage
-    tool.Parent = ReplicatedStorage
+    -- Add the tool to the player's backpack
+    tool.Parent = Players.LocalPlayer.Backpack
 
     -- Create the script for the tool
     local script = Instance.new("Script")
@@ -47,6 +46,7 @@ local function createWebShooterTool()
 
         -- Configuration
         local DAMAGE_AMOUNT = 100 -- Amount of damage to deal
+        local MOVE_SPEED = 50 -- Speed at which player moves to the target
 
         -- Tool
         local tool = script.Parent
@@ -102,25 +102,5 @@ local function createWebShooterTool()
     return tool
 end
 
--- Function to equip the tool to a player
-local function equipTool(player)
-    local tool = ReplicatedStorage:FindFirstChild(TOOL_NAME)
-    if tool then
-        tool:Clone().Parent = player.Backpack
-    end
-end
-
 -- Create the web shooter tool
 createWebShooterTool()
-
--- Equip tool to all players who join the game
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        equipTool(player)
-    end)
-end)
-
--- Equip tool to existing players
-for _, player in ipairs(Players:GetPlayers()) do
-    equipTool(player)
-end
