@@ -1,0 +1,66 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+-- Create the FOV circle UI
+local function createFovCircle()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "FOV_GUI"
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local fovCircle = Instance.new("Frame")
+    fovCircle.Size = UDim2.new(0, 200, 0, 200) -- Size of the circle
+    fovCircle.Position = UDim2.new(0.5, -100, 0.5, -100) -- Centered on screen
+    fovCircle.BackgroundTransparency = 1
+    fovCircle.BorderSizePixel = 5
+    fovCircle.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Circle color
+    fovCircle.Parent = screenGui
+
+    return fovCircle
+end
+
+-- Create ESP UI
+local function createESP(player)
+    local esp = Instance.new("BillboardGui")
+    esp.Name = "ESP_" .. player.Name
+    esp.Adornee = player.Character:FindFirstChild("Head")
+    esp.Size = UDim2.new(0, 150, 0, 50)
+    esp.StudsOffset = Vector3.new(0, 2, 0)
+    esp.AlwaysOnTop = true
+    esp.Parent = LocalPlayer.PlayerGui:WaitForChild("FOV_GUI")
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    nameLabel.TextStrokeTransparency = 0.5
+    nameLabel.Text = player.Name
+    nameLabel.Parent = esp
+end
+
+local fovCircle = createFovCircle()
+
+-- Update FOV circle position and ESP
+RunService.RenderStepped:Connect(function()
+    -- Update FOV circle position based on touch input
+    local touchInputs = UserInputService:GetTouchPositions()
+    if #touchInputs > 0 then
+        local touchPosition = touchInputs[1]
+        fovCircle.Position = UDim2.new(0, touchPosition.X - fovCircle.AbsoluteSize.X / 2, 0, touchPosition.Y - fovCircle.AbsoluteSize.Y / 2)
+    end
+
+    -- Create ESP for players if not already created
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            if not LocalPlayer.PlayerGui:FindFirstChild("FOV_GUI"):FindFirstChild("ESP_" .. player.Name) then
+                createESP(player)
+            end
+        end
+    end
+
+    -- Debug FOV Circle Position
+    print("FOV Circle Position: " .. tostring(fovCircle.Position))
+end)
