@@ -78,7 +78,7 @@ end
 -- Function to adjust aiming direction with prediction
 function silentAim()
     if silentAimEnabled and lockedTarget then
-        local predictionTime = 1.1 -- Adjust prediction time as needed
+        local predictionTime = 0.4 -- Adjust prediction time as needed
         local predictedPos = predictTargetPosition(lockedTarget, predictionTime)
         if predictedPos then
             local cam = workspace.CurrentCamera
