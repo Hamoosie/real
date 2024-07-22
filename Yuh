@@ -38,6 +38,7 @@ function createESP()
         espBox.BackgroundTransparency = 1
         espBox.BorderSizePixel = 2
         espBox.BorderColor3 = Color3.fromRGB(0, 255, 0) -- Green border
+        espBox.Name = "ESP_" .. player.UserId -- Unique name for each player's ESP box
         espBox.Visible = espEnabled
 
         local nameTag = Instance.new("TextLabel", screenGui)
@@ -46,14 +47,25 @@ function createESP()
         nameTag.Text = player.Name
         nameTag.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
         nameTag.BackgroundTransparency = 1
+        nameTag.Name = "NameTag_" .. player.UserId -- Unique name for each player's name tag
         nameTag.Visible = espEnabled
-
-        return espBox, nameTag
     end
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             createESPBox(player)
+        end
+    end
+end
+
+-- Function to update ESP visibility
+function updateESP()
+    local screenGui = Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
+    for _, child in ipairs(screenGui:GetChildren()) do
+        if child:IsA("Frame") and child.Name:match("^ESP_") then
+            child.Visible = espEnabled
+        elseif child:IsA("TextLabel") and child.Name:match("^NameTag_") then
+            child.Visible = espEnabled
         end
     end
 end
@@ -98,11 +110,7 @@ function createMenu()
     espButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
     espButton.MouseButton1Click:Connect(function()
         espEnabled = not espEnabled
-        for _, child in pairs(screenGui:GetChildren()) do
-            if child:IsA("Frame") and child ~= menu then
-                child.Visible = espEnabled
-            end
-        end
+        updateESP() -- Update ESP visibility
         print("ESP " .. (espEnabled and "enabled" or "disabled"))
     end)
 end
