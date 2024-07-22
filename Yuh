@@ -1,9 +1,8 @@
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Tool name and creation path
+-- Tool name
 local TOOL_NAME = "AimlockTool"
 
 -- Variables for the locked target and tool management
@@ -26,6 +25,7 @@ function createAimlockTool()
     handle.Parent = tool
     
     tool.Parent = Players.LocalPlayer.Backpack
+    print("Tool created and added to backpack.")
     return tool
 end
 
@@ -93,7 +93,10 @@ end
 -- Initialize the tool and aimlock
 aimlockTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
 if not aimlockTool then
+    print("Tool not found in backpack, creating...")
     aimlockTool = createAimlockTool()
+else
+    print("Tool found in backpack.")
 end
 
 -- Continuous aimlock
