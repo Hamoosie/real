@@ -12,7 +12,7 @@ local MOVE_SPEED = 50 -- Speed at which player moves to the target
 
 -- Function to create the web shooter tool
 local function createWebShooterTool()
-    -- Check if the tool already exists
+    -- Check if the tool already exists in the player's backpack
     local existingTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
     if existingTool then
         return existingTool
@@ -43,9 +43,9 @@ local function createWebShooterTool()
         local Players = game:GetService("Players")
         local TweenService = game:GetService("TweenService")
         local Workspace = game:GetService("Workspace")
+        local UserInputService = game:GetService("UserInputService")
 
         -- Configuration
-        local DAMAGE_AMOUNT = 100 -- Amount of damage to deal
         local MOVE_SPEED = 50 -- Speed at which player moves to the target
 
         -- Tool
@@ -72,26 +72,31 @@ local function createWebShooterTool()
 
         -- Function to handle tool activation
         local function onActivate()
-            local mouseHit = mouse.Hit
-            local targetPosition = mouseHit.Position
+            -- Wait for a touch input
+            local touchInput = UserInputService.TouchInputBegan:Wait()
+            if touchInput and touchInput.UserInputType == Enum.UserInputType.Touch then
+                local touchLocation = touchInput.Position
+                local screenPoint = workspace.CurrentCamera:ScreenToWorldPoint(Vector3.new(touchLocation.X, touchLocation.Y, 0))
+                local targetPosition = screenPoint
 
-            -- Create web effect
-            createWebEffect(targetPosition)
+                -- Create web effect
+                createWebEffect(targetPosition)
 
-            -- Calculate direction and distance
-            local direction = (targetPosition - humanoidRootPart.Position).unit
-            local distance = (targetPosition - humanoidRootPart.Position).magnitude
+                -- Calculate direction and distance
+                local direction = (targetPosition - humanoidRootPart.Position).unit
+                local distance = (targetPosition - humanoidRootPart.Position).magnitude
 
-            -- Tween for smooth movement
-            local tweenInfo = TweenInfo.new(distance / MOVE_SPEED, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
-            local goal = {Position = targetPosition}
-            local tween = TweenService:Create(humanoidRootPart, tweenInfo, goal)
-            tween:Play()
+                -- Tween for smooth movement
+                local tweenInfo = TweenInfo.new(distance / MOVE_SPEED, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut)
+                local goal = {Position = targetPosition}
+                local tween = TweenService:Create(humanoidRootPart, tweenInfo, goal)
+                tween:Play()
 
-            -- Teleport to target position after the tween completes
-            tween.Completed:Connect(function()
-                humanoidRootPart.Position = targetPosition
-            end)
+                -- Teleport to target position after the tween completes
+                tween.Completed:Connect(function()
+                    humanoidRootPart.Position = targetPosition
+                end)
+            end
         end
 
         -- Connect the tool activation to the onActivate function
