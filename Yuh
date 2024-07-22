@@ -1,147 +1,68 @@
 -- Services
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 -- Configuration
-local ESP_ENABLED = true
-local AIMBOT_ENABLED = true
-local FLY_ENABLED = true
-local SPEED_ENABLED = true
-local GOD_MODE_ENABLED = true
+local ESPColor = Color3.fromRGB(255, 0, 0) -- Red color for outlines
+local NameColors = {Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 0, 255), Color3.fromRGB(255, 255, 0)} -- Different colors for names
+local NAME_SCALE = Vector3.new(0.5, 0.5, 0.5) -- Scale for name tags
 
--- Variables
-local player = Players.LocalPlayer
-local camera = Workspace.CurrentCamera
-local speed = 100 -- Adjust speed multiplier as needed
-local flySpeed = 50 -- Adjust fly speed as needed
-
--- ESP Function
-local function createESP()
-    local function onCharacterAdded(character)
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            local esp = Instance.new("BillboardGui")
-            esp.Name = "ESP"
-            esp.Parent = player.PlayerGui
-            esp.Adornee = character.HumanoidRootPart
-            esp.Size = UDim2.new(0, 150, 0, 50)
-            esp.StudsOffset = Vector3.new(0, 3, 0)
-            esp.AlwaysOnTop = true
-            esp.BackgroundTransparency = 1
-            esp.TextLabel.Text = character.Name
-            esp.TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-            esp.TextLabel.TextStrokeTransparency = 0
-            esp.TextLabel.TextSize = 16
-
-            if not ESP_ENABLED then
-                esp.Visible = false
-            end
-        end
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-    if player.Character then
-        onCharacterAdded(player.Character)
-    end
-end
-
--- Aimbot Function
-local function aimbot()
-    local function getClosestPlayer()
-        local closestPlayer = nil
-        local shortestDistance = math.huge
-
-        for _, otherPlayer in ipairs(Players:GetPlayers()) do
-            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                local dist = (camera.CFrame.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
-                if dist < shortestDistance then
-                    closestPlayer = otherPlayer
-                    shortestDistance = dist
-                end
+-- Function to create ESP for a player
+local function createESP(player)
+    local character = player.Character
+    if character then
+        for _, part in ipairs(character:GetChildren()) do
+            if part:IsA("BasePart") and not part:FindFirstChild("ESPBox") then
+                local espBox = Instance.new("BoxHandleAdornment", part)
+                espBox.Name = "ESPBox"
+                espBox.Adornee = part
+                espBox.Size = part.Size
+                espBox.Color3 = ESPColor
+                espBox.Transparency = 0.5
+                espBox.AlwaysOnTop = true
+                espBox.ZIndex = 1
+                espBox.Visible = true
             end
         end
 
-        return closestPlayer
-    end
+        if not character:FindFirstChild("ESPNameTag") then
+            local billBoard = Instance.new("BillboardGui", character)
+            billBoard.Name = "ESPNameTag"
+            billBoard.Size = UDim2.new(0, 200, 0, 50)
+            billBoard.Adornee = character:FindFirstChild("Head")
+            billBoard.AlwaysOnTop = true
 
-    local function onRenderStepped()
-        if AIMBOT_ENABLED then
-            local target = getClosestPlayer()
-            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-                camera.CFrame = CFrame.new(camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
-            end
+            local nameLabel = Instance.new("TextLabel", billBoard)
+            nameLabel.Size = UDim2.new(1, 0, 1, 0)
+            nameLabel.BackgroundTransparency = 1
+            nameLabel.Text = player.Name
+            nameLabel.TextColor3 = NameColors[math.random(1, #NameColors)]
+            nameLabel.TextScaled = true
+            nameLabel.Font = Enum.Font.SourceSansBold
         end
-    end
-
-    RunService.RenderStepped:Connect(onRenderStepped)
-end
-
--- Fly Function
-local function fly()
-    local bodyVelocity = Instance.new("BodyVelocity")
-    local bodyGyro = Instance.new("BodyGyro")
-
-    local function onCharacterAdded(character)
-        if character and character:FindFirstChild("HumanoidRootPart") then
-            bodyVelocity.Parent = character.HumanoidRootPart
-            bodyGyro.Parent = character.HumanoidRootPart
-            bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
-            bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
-            bodyGyro.CFrame = character.HumanoidRootPart.CFrame
-            bodyVelocity.Velocity = Vector3.new()
-        end
-    end
-
-    local function onRenderStepped()
-        if FLY_ENABLED then
-            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local direction = (UserInputService:GetMouseLocation() - camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)).unit
-                bodyVelocity.Velocity = direction * flySpeed
-                bodyGyro.CFrame = camera.CFrame
-            end
-        end
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-    if player.Character then
-        onCharacterAdded(player.Character)
-    end
-
-    RunService.RenderStepped:Connect(onRenderStepped)
-end
-
--- Speed Function
-local function setSpeed()
-    local function onCharacterAdded(character)
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.WalkSpeed = SPEED_ENABLED and speed or 16
-        end
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-    if player.Character then
-        onCharacterAdded(player.Character)
     end
 end
 
--- God Mode Function
-local function godMode()
-    local function onCharacterAdded(character)
-        if character and character:FindFirstChild("Humanoid") then
-            character.Humanoid.Health = GOD_MODE_ENABLED and math.huge or character.Humanoid.Health
+-- Create ESP for existing players
+for _, player in pairs(Players:GetPlayers()) do
+    if player ~= Players.LocalPlayer then
+        player.CharacterAdded:Connect(function()
+            wait(1) -- Wait for character to load
+            createESP(player)
+        end)
+        if player.Character then
+            createESP(player)
         end
-    end
-
-    player.CharacterAdded:Connect(onCharacterAdded)
-    if player.Character then
-        onCharacterAdded(player.Character)
     end
 end
 
--- Initialize all features
-createESP()
-aimbot()
-fly()
-setSpeed()
-godMode()
+-- Create ESP for new players
+Players.PlayerAdded:Connect(function(player)
+    if player ~= Players.LocalPlayer then
+        player.CharacterAdded:Connect(function()
+            wait(1) -- Wait for character to load
+            createESP(player)
+        end)
+    end
+end)
