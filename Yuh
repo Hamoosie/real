@@ -1,180 +1,147 @@
+-- Services
 local Players = game:GetService("Players")
-local workspace = game:GetService("Workspace")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
-local UIS = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Configuration
-local FOV_RADIUS = 100 -- Radius of the FOV circle
-local MAX_DISTANCE = 100 -- Maximum distance for locking onto players
-local MENU_SIZE = UDim2.new(0, 200, 0, 300) -- Size of the menu
-local BUTTON_SIZE = UDim2.new(0, 180, 0, 40) -- Size of the toggle buttons
+local ESP_ENABLED = true
+local AIMBOT_ENABLED = true
+local FLY_ENABLED = true
+local SPEED_ENABLED = true
+local GOD_MODE_ENABLED = true
 
 -- Variables
-local lockedTarget = nil
-local fovCircle = nil
-local aimlockEnabled = false -- Default to disabled
-local espEnabled = false -- Default to disabled
+local player = Players.LocalPlayer
+local camera = Workspace.CurrentCamera
+local speed = 100 -- Adjust speed multiplier as needed
+local flySpeed = 50 -- Adjust fly speed as needed
 
--- Function to create the FOV circle
-function createFOVCircle()
-    local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
-    fovCircle = Instance.new("Frame", screenGui)
-    fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
-    fovCircle.Position = UDim2.new(0.5, -FOV_RADIUS, 0.5, -FOV_RADIUS)
-    fovCircle.BackgroundTransparency = 1
-    fovCircle.BorderSizePixel = 2
-    fovCircle.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Red color for FOV circle
-    fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-    fovCircle.Visible = false -- Default to hidden
-end
+-- ESP Function
+local function createESP()
+    local function onCharacterAdded(character)
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local esp = Instance.new("BillboardGui")
+            esp.Name = "ESP"
+            esp.Parent = player.PlayerGui
+            esp.Adornee = character.HumanoidRootPart
+            esp.Size = UDim2.new(0, 150, 0, 50)
+            esp.StudsOffset = Vector3.new(0, 3, 0)
+            esp.AlwaysOnTop = true
+            esp.BackgroundTransparency = 1
+            esp.TextLabel.Text = character.Name
+            esp.TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+            esp.TextLabel.TextStrokeTransparency = 0
+            esp.TextLabel.TextSize = 16
 
--- Function to create the ESP
-function createESP()
-    local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
-
-    local function createESPBox(player)
-        local espBox = Instance.new("Frame", screenGui)
-        espBox.Size = UDim2.new(0, 100, 0, 100) -- Box size
-        espBox.BackgroundTransparency = 1
-        espBox.BorderSizePixel = 2
-        espBox.BorderColor3 = Color3.fromRGB(0, 255, 0) -- Green border
-        espBox.Name = "ESP_" .. player.UserId -- Unique name for each player's ESP box
-        espBox.Visible = espEnabled
-
-        local nameTag = Instance.new("TextLabel", screenGui)
-        nameTag.Size = UDim2.new(0, 100, 0, 30) -- Name tag size
-        nameTag.Position = UDim2.new(0.5, -50, 0, -50) -- Position above the player
-        nameTag.Text = player.Name
-        nameTag.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
-        nameTag.BackgroundTransparency = 1
-        nameTag.Name = "NameTag_" .. player.UserId -- Unique name for each player's name tag
-        nameTag.Visible = espEnabled
-    end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            createESPBox(player)
-        end
-    end
-end
-
--- Function to update ESP visibility
-function updateESP()
-    local screenGui = Players.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChildOfClass("ScreenGui")
-    if screenGui then
-        for _, child in ipairs(screenGui:GetChildren()) do
-            if child:IsA("Frame") and child.Name:match("^ESP_") then
-                child.Visible = espEnabled
-            elseif child:IsA("TextLabel") and child.Name:match("^NameTag_") then
-                child.Visible = espEnabled
+            if not ESP_ENABLED then
+                esp.Visible = false
             end
         end
     end
+
+    player.CharacterAdded:Connect(onCharacterAdded)
+    if player.Character then
+        onCharacterAdded(player.Character)
+    end
 end
 
--- Function to create the menu and toggle buttons
-function createMenu()
-    local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
-    local menu = Instance.new("Frame", screenGui)
-    menu.Size = MENU_SIZE
-    menu.Position = UDim2.new(0.5, -MENU_SIZE.X.Offset / 2, 0.5, -MENU_SIZE.Y.Offset / 2)
-    menu.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black background
-    menu.BackgroundTransparency = 0.5
-    menu.Visible = false
+-- Aimbot Function
+local function aimbot()
+    local function getClosestPlayer()
+        local closestPlayer = nil
+        local shortestDistance = math.huge
 
-    local toggleMenuButton = Instance.new("TextButton", screenGui)
-    toggleMenuButton.Size = BUTTON_SIZE
-    toggleMenuButton.Position = UDim2.new(0, 10, 0.5, -BUTTON_SIZE.Y.Offset / 2)
-    toggleMenuButton.Text = "Toggle Menu"
-    toggleMenuButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green color
-    toggleMenuButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
-    toggleMenuButton.MouseButton1Click:Connect(function()
-        menu.Visible = not menu.Visible
-    end)
-
-    local aimlockButton = Instance.new("TextButton", menu)
-    aimlockButton.Size = BUTTON_SIZE
-    aimlockButton.Position = UDim2.new(0, 10, 0, 10)
-    aimlockButton.Text = "Toggle Aimlock"
-    aimlockButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green color
-    aimlockButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
-    aimlockButton.MouseButton1Click:Connect(function()
-        aimlockEnabled = not aimlockEnabled
-        fovCircle.Visible = aimlockEnabled
-        print("Aimlock " .. (aimlockEnabled and "enabled" or "disabled"))
-    end)
-
-    local espButton = Instance.new("TextButton", menu)
-    espButton.Size = BUTTON_SIZE
-    espButton.Position = UDim2.new(0, 10, 0, 60)
-    espButton.Text = "Toggle ESP"
-    espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255) -- Blue color
-    espButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
-    espButton.MouseButton1Click:Connect(function()
-        espEnabled = not espEnabled
-        updateESP() -- Update ESP visibility
-        print("ESP " .. (espEnabled and "enabled" or "disabled"))
-    end)
-end
-
--- Function to get the player within the FOV circle
-function getPlayerInFOV()
-    local cam = workspace.CurrentCamera
-    local playersInFOV = {}
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local charPos = cam:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
-            local screenCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
-            local dist = (Vector2.new(charPos.X, charPos.Y) - screenCenter).Magnitude
-
-            if dist <= FOV_RADIUS then
-                local distanceToPlayer = (cam.CFrame.Position - player.Character.HumanoidRootPart.Position).magnitude
-                if distanceToPlayer <= MAX_DISTANCE then
-                    table.insert(playersInFOV, {player = player, distance = distanceToPlayer})
+        for _, otherPlayer in ipairs(Players:GetPlayers()) do
+            if otherPlayer ~= player and otherPlayer.Character and otherPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (camera.CFrame.Position - otherPlayer.Character.HumanoidRootPart.Position).magnitude
+                if dist < shortestDistance then
+                    closestPlayer = otherPlayer
+                    shortestDistance = dist
                 end
             end
         end
+
+        return closestPlayer
     end
 
-    table.sort(playersInFOV, function(a, b) return a.distance < b.distance end)
-
-    if #playersInFOV > 0 then
-        return playersInFOV[1].player
-    end
-
-    return nil
-end
-
--- Function to handle shooting
-function onShoot()
-    if aimlockEnabled and lockedTarget then
-        local cam = workspace.CurrentCamera
-        local targetPosition = lockedTarget.Character.HumanoidRootPart.Position
-        cam.CFrame = CFrame.new(cam.CFrame.Position, targetPosition)
-    end
-end
-
--- Function to update aimlock
-function updateAimlock()
-    if aimlockEnabled and not lockedTarget then
-        local target = getPlayerInFOV()
-        if target then
-            lockedTarget = target
-            print("Locked onto player:", lockedTarget.Name)
+    local function onRenderStepped()
+        if AIMBOT_ENABLED then
+            local target = getClosestPlayer()
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                camera.CFrame = CFrame.new(camera.CFrame.Position, target.Character.HumanoidRootPart.Position)
+            end
         end
-    elseif not aimlockEnabled then
-        lockedTarget = nil
+    end
+
+    RunService.RenderStepped:Connect(onRenderStepped)
+end
+
+-- Fly Function
+local function fly()
+    local bodyVelocity = Instance.new("BodyVelocity")
+    local bodyGyro = Instance.new("BodyGyro")
+
+    local function onCharacterAdded(character)
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            bodyVelocity.Parent = character.HumanoidRootPart
+            bodyGyro.Parent = character.HumanoidRootPart
+            bodyVelocity.MaxForce = Vector3.new(4000, 4000, 4000)
+            bodyGyro.MaxTorque = Vector3.new(4000, 4000, 4000)
+            bodyGyro.CFrame = character.HumanoidRootPart.CFrame
+            bodyVelocity.Velocity = Vector3.new()
+        end
+    end
+
+    local function onRenderStepped()
+        if FLY_ENABLED then
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local direction = (UserInputService:GetMouseLocation() - camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)).unit
+                bodyVelocity.Velocity = direction * flySpeed
+                bodyGyro.CFrame = camera.CFrame
+            end
+        end
+    end
+
+    player.CharacterAdded:Connect(onCharacterAdded)
+    if player.Character then
+        onCharacterAdded(player.Character)
+    end
+
+    RunService.RenderStepped:Connect(onRenderStepped)
+end
+
+-- Speed Function
+local function setSpeed()
+    local function onCharacterAdded(character)
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.WalkSpeed = SPEED_ENABLED and speed or 16
+        end
+    end
+
+    player.CharacterAdded:Connect(onCharacterAdded)
+    if player.Character then
+        onCharacterAdded(player.Character)
     end
 end
 
--- Initialize components
-createFOVCircle()
-createESP()
-createMenu()
+-- God Mode Function
+local function godMode()
+    local function onCharacterAdded(character)
+        if character and character:FindFirstChild("Humanoid") then
+            character.Humanoid.Health = GOD_MODE_ENABLED and math.huge or character.Humanoid.Health
+        end
+    end
 
--- Continuous aimlock and shooting logic
-RunService.RenderStepped:Connect(function()
-    updateAimlock()
-    onShoot()
-end)
+    player.CharacterAdded:Connect(onCharacterAdded)
+    if player.Character then
+        onCharacterAdded(player.Character)
+    end
+end
+
+-- Initialize all features
+createESP()
+aimbot()
+fly()
+setSpeed()
+godMode()
