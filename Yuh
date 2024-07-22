@@ -34,8 +34,9 @@ end
 function silentAim()
     local target = getClosestPlayerInFOV()
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        local mouse = game.Players.LocalPlayer:GetMouse()
-        mouse.Hit = target.Character.HumanoidRootPart.CFrame
+        local targetPos = target.Character.HumanoidRootPart.Position
+        local cam = workspace.CurrentCamera
+        cam.CFrame = CFrame.new(cam.CFrame.Position, targetPos)
     end
 end
 
