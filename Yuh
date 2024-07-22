@@ -1,93 +1,93 @@
 local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Create the FOV circle
-local fovCircle = Drawing.new("Circle")
-fovCircle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
-fovCircle.Radius = 100 -- Adjust the radius as needed
-fovCircle.Thickness = 2
-fovCircle.Color = Color3.new(1, 0, 0) -- Red color
-fovCircle.Filled = false
-fovCircle.Visible = true
+-- Tool name and storage path
+local TOOL_NAME = "AimlockTool"
+local TOOL_STORAGE = ReplicatedStorage:WaitForChild("Tools") -- Assuming the tool is stored here
 
--- Maximum distance for targeting
-local maxDistance = 200 -- Adjust as needed
-
--- Toggle state and locked target
-local silentAimEnabled = false
+-- Variables for the locked target and tool management
 local lockedTarget = nil
+local aimlockTool = nil
+local aimlockEnabled = false
 
--- Create a toggle button
-local screenGui = Instance.new("ScreenGui")
-local toggleButton = Instance.new("TextButton")
-
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
-
-toggleButton.Size = UDim2.new(0, 100, 0, 50)
-toggleButton.Position = UDim2.new(0, 10, 0.5, -25) -- Left side of the screen
-toggleButton.BackgroundColor3 = Color3.new(0, 0, 0)
-toggleButton.TextColor3 = Color3.new(1, 1, 1)
-toggleButton.Text = "Enable Silent Aim"
-toggleButton.Parent = screenGui
-
-toggleButton.MouseButton1Click:Connect(function()
-    silentAimEnabled = not silentAimEnabled
-    if silentAimEnabled and not lockedTarget then
-        lockedTarget = getClosestPlayerInFOV() -- Lock onto the first target
-    else
-        lockedTarget = nil -- Unlock target when disabling
+-- Function to clone the tool into the player's backpack
+function giveAimlockTool()
+    local player = Players.LocalPlayer
+    local tool = TOOL_STORAGE:FindFirstChild(TOOL_NAME)
+    if tool then
+        local clonedTool = tool:Clone()
+        clonedTool.Parent = player.Backpack
     end
-    toggleButton.Text = silentAimEnabled and "Disable Silent Aim" or "Enable Silent Aim"
-end)
-
--- Function to get the closest player within the FOV circle and distance
-function getClosestPlayerInFOV()
-    local players = game.Players:GetPlayers()
-    local localPlayer = game.Players.LocalPlayer
-    local closestPlayer = nil
-    local shortestDistance = math.huge
-
-    for _, player in pairs(players) do
-        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local character = player.Character
-            local humanoidRootPart = character.HumanoidRootPart
-            local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(humanoidRootPart.Position)
-            local fovCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
-            local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - fovCenter).magnitude
-            local actualDistance = (localPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).magnitude
-
-            if distance < fovCircle.Radius and distance < shortestDistance and actualDistance <= maxDistance then
-                closestPlayer = player
-                shortestDistance = distance
-            end
-        end
-    end
-
-    return closestPlayer
 end
 
--- Function to predict the future position of the target
-function predictTargetPosition(target, predictionTime)
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        local targetPos = target.Character.HumanoidRootPart.Position
-        local targetVelocity = target.Character.HumanoidRootPart.Velocity
-        return targetPos + targetVelocity * predictionTime
+-- Function to get the player at the mouse position
+function getPlayerAtMouse()
+    local mouse = Players.LocalPlayer:GetMouse()
+    local target = mouse.Target
+    if target and target.Parent and target.Parent:FindFirstChild("Humanoid") then
+        return Players:GetPlayerFromCharacter(target.Parent)
     end
     return nil
 end
 
--- Function to adjust aiming direction with prediction
-function silentAim()
-    if silentAimEnabled and lockedTarget then
-        local predictionTime = 0.4 -- Adjust prediction time as needed
-        local predictedPos = predictTargetPosition(lockedTarget, predictionTime)
-        if predictedPos then
-            local cam = workspace.CurrentCamera
-            cam.CFrame = CFrame.new(cam.CFrame.Position, predictedPos)
-        end
+-- Function to lock onto a player
+function lockOnToPlayer(player)
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        lockedTarget = player
     end
 end
 
--- Continuous silent aim
-game:GetService("RunService").RenderStepped:Connect(function()
-    silentAim()
+-- Function to clear the locked target
+function clearLock()
+    lockedTarget = nil
+end
+
+-- Handle tool activation and deactivation
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if aimlockTool and aimlockTool.Parent then
+            if aimlockEnabled then
+                local player = getPlayerAtMouse()
+                if player then
+                    lockOnToPlayer(player)
+                end
+            end
+        end
+    end
+end)
+
+-- Handle tool visibility
+UIS.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+        if aimlockTool and aimlockTool.Parent then
+            if lockedTarget then
+                clearLock()
+            end
+        end
+    end
+end)
+
+-- Function to adjust aiming direction with prediction
+function aimlock()
+    if lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local cam = workspace.CurrentCamera
+        local targetPos = lockedTarget.Character.HumanoidRootPart.Position
+        local predictedPos = targetPos -- Add prediction logic here if needed
+        cam.CFrame = CFrame.new(cam.CFrame.Position, predictedPos)
+    end
+end
+
+-- Initialize the tool and aimlock
+giveAimlockTool()
+aimlockTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
+
+-- Continuous aimlock
+RunService.RenderStepped:Connect(function()
+    aimlock()
 end)
