@@ -30,20 +30,16 @@ function getClosestPlayerInFOV()
     return closestPlayer
 end
 
--- Function to adjust bullet direction
+-- Function to adjust aiming direction
 function silentAim()
     local target = getClosestPlayerInFOV()
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        local bullet = workspace:FindFirstChild("Bullet") -- Adjust according to the game's bullet object
-        if bullet then
-            bullet.CFrame = CFrame.new(bullet.Position, target.Character.HumanoidRootPart.Position)
-        end
+        local mouse = game.Players.LocalPlayer:GetMouse()
+        mouse.Hit = target.Character.HumanoidRootPart.CFrame
     end
 end
 
--- Listen for when a bullet is fired
-workspace.ChildAdded:Connect(function(child)
-    if child.Name == "Bullet" then -- Adjust according to the game's bullet object
-        silentAim()
-    end
+-- Continuous silent aim
+game:GetService("RunService").RenderStepped:Connect(function()
+    silentAim()
 end)
