@@ -3,78 +3,39 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 -- Configuration
-local SPEED = 60
-local ANIMATION_ID = "rbxassetid://507766666" -- Replace with a superhero running animation ID
-local SPARK_COLOR = Color3.fromRGB(255, 255, 0) -- Yellow color for sparks
-local SPARK_TEXTURE = "rbxassetid://243660364" -- Replace with your desired spark texture
+local HITBOX_SCALE = 2 -- Scale factor to increase the hitbox size
 
 -- Local player
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local humanoid = character:WaitForChild("Humanoid")
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
--- Function to create spark effect
-local function createSpark()
-    local spark = Instance.new("ParticleEmitter")
-    spark.Texture = SPARK_TEXTURE
-    spark.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 0)),
-        ColorSequenceKeypoint.new(0.5, Color3.new(1, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.new(0, 0, 1))
-    })
-    spark.LightEmission = 1
-    spark.Size = NumberSequence.new(1)
-    spark.Rate = 100
-    spark.Lifetime = NumberRange.new(0.2, 0.5)
-    spark.Speed = NumberRange.new(10, 20)
-    spark.Acceleration = Vector3.new(0, 0, 0)
-    spark.Parent = character:WaitForChild("HumanoidRootPart")
-    return spark
-end
-
--- Function to set the player's walk speed
-local function setWalkSpeed(speed)
-    humanoid.WalkSpeed = speed
-end
-
--- Load and play the running animation
-local animation = Instance.new("Animation")
-animation.AnimationId = ANIMATION_ID
-local animationTrack = humanoid:LoadAnimation(animation)
-
--- Start/Stop running animation and effects based on movement state
-local function updateEffects(speed)
-    if speed > 0 then
-        setWalkSpeed(SPEED)
-        if not animationTrack.IsPlaying then
-            animationTrack:Play()
-        end
-        if not character:FindFirstChild("SparkEffect") then
-            local spark = createSpark()
-            spark.Name = "SparkEffect"
-        end
-    else
-        setWalkSpeed(16) -- Default speed
-        if animationTrack.IsPlaying then
-            animationTrack:Stop()
-        end
-        if character:FindFirstChild("SparkEffect") then
-            character.SparkEffect:Destroy()
+-- Function to scale character hitbox
+local function scaleHitbox(scale)
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if humanoidRootPart then
+        -- Scale HumanoidRootPart
+        humanoidRootPart.Size = humanoidRootPart.Size * scale
+        humanoidRootPart.CFrame = humanoidRootPart.CFrame * CFrame.new(0, 0, 0) -- Reset position to avoid shift
+        
+        -- Scale other body parts
+        for _, part in pairs(character:GetChildren()) do
+            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+                part.Size = part.Size * scale
+                part.CFrame = part.CFrame * CFrame.new(0, 0, 0) -- Reset position to avoid shift
+            end
         end
     end
 end
 
-humanoid.Running:Connect(updateEffects)
+-- Apply hitbox scaling
+scaleHitbox(HITBOX_SCALE)
 
 -- Handle character respawn
 player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
-    humanoid = newCharacter:WaitForChild("Humanoid")
-    
-    -- Ensure the PrimaryPart is set
-    if not character.PrimaryPart then
-        character:GetPropertyChangedSignal("PrimaryPart"):Wait()
-    end
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 
-    humanoid.Running:Connect(updateEffects)
+    -- Apply hitbox scaling to the new character
+    scaleHitbox(HITBOX_SCALE)
 end)
