@@ -23,13 +23,18 @@ local function createSpark()
         ColorSequenceKeypoint.new(1, Color3.new(0, 0, 1))
     })
     spark.LightEmission = 1
-    spark.Size = NumberSequence.new(0.5)
+    spark.Size = NumberSequence.new(1)
     spark.Rate = 100
     spark.Lifetime = NumberRange.new(0.2, 0.5)
-    spark.Speed = NumberRange.new(5, 10)
-    spark.Acceleration = Vector3.new(0, -10, 0)
+    spark.Speed = NumberRange.new(10, 20)
+    spark.Acceleration = Vector3.new(0, 0, 0)
     spark.Parent = character:WaitForChild("HumanoidRootPart")
     return spark
+end
+
+-- Function to set the player's walk speed
+local function setWalkSpeed(speed)
+    humanoid.WalkSpeed = speed
 end
 
 -- Load and play the running animation
@@ -40,7 +45,7 @@ local animationTrack = humanoid:LoadAnimation(animation)
 -- Start/Stop running animation and effects based on movement state
 local function updateEffects(speed)
     if speed > 0 then
-        humanoid.WalkSpeed = SPEED
+        setWalkSpeed(SPEED)
         if not animationTrack.IsPlaying then
             animationTrack:Play()
         end
@@ -49,7 +54,7 @@ local function updateEffects(speed)
             spark.Name = "SparkEffect"
         end
     else
-        humanoid.WalkSpeed = 16
+        setWalkSpeed(16) -- Default speed
         if animationTrack.IsPlaying then
             animationTrack:Stop()
         end
