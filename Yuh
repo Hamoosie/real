@@ -23,7 +23,11 @@ function createFOVCircle()
     fovCircle.BackgroundTransparency = 0.5
     fovCircle.BorderSizePixel = 0
     fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-    fovCircle.Visible = aimlockEnabled
+    fovCircle.ClipsDescendants = true
+    
+    -- Create the circular mask
+    local mask = Instance.new("UICorner", fovCircle)
+    mask.CornerRadius = UDim.new(0.5, 0) -- Creates the circular shape
 end
 
 -- Function to create the enable/disable button
