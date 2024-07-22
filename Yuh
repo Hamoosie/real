@@ -6,12 +6,14 @@ local UIS = game:GetService("UserInputService")
 -- Configuration
 local FOV_RADIUS = 100 -- Radius of the FOV circle
 local MAX_DISTANCE = 100 -- Maximum distance for locking onto players
-local AIMLOCK_BUTTON_SIZE = UDim2.new(0, 100, 0, 50) -- Size of the toggle button
+local MENU_SIZE = UDim2.new(0, 200, 0, 300) -- Size of the menu
+local BUTTON_SIZE = UDim2.new(0, 180, 0, 40) -- Size of the toggle buttons
 
 -- Variables
 local lockedTarget = nil
 local fovCircle = nil
 local aimlockEnabled = false -- Default to disabled
+local espEnabled = false -- Default to disabled
 
 -- Function to create the FOV circle
 function createFOVCircle()
@@ -23,26 +25,85 @@ function createFOVCircle()
     fovCircle.BorderSizePixel = 2
     fovCircle.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Red color for FOV circle
     fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-    
-    -- Create a circular shape with UICorner
-    local corner = Instance.new("UICorner", fovCircle)
-    corner.CornerRadius = UDim.new(0.5, 0) -- Circular shape
+    fovCircle.Visible = false -- Default to hidden
 end
 
--- Function to create the enable/disable button
-function createToggleButton()
+-- Function to create the ESP
+function createESP()
     local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
-    local button = Instance.new("TextButton", screenGui)
-    button.Size = AIMLOCK_BUTTON_SIZE
-    button.Position = UDim2.new(0, 10, 0.5, -AIMLOCK_BUTTON_SIZE.Y.Offset / 2)
-    button.Text = "Toggle Aimlock"
-    button.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green color for the button
-    button.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text color
 
-    button.MouseButton1Click:Connect(function()
+    local function createESPBox(player)
+        local espBox = Instance.new("Frame", screenGui)
+        espBox.Size = UDim2.new(0, 100, 0, 100) -- Box size
+        espBox.BackgroundTransparency = 1
+        espBox.BorderSizePixel = 2
+        espBox.BorderColor3 = Color3.fromRGB(0, 255, 0) -- Green border
+        espBox.Visible = espEnabled
+
+        local nameTag = Instance.new("TextLabel", screenGui)
+        nameTag.Size = UDim2.new(0, 100, 0, 30) -- Name tag size
+        nameTag.Position = UDim2.new(0.5, -50, 0, -50) -- Position above the player
+        nameTag.Text = player.Name
+        nameTag.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
+        nameTag.BackgroundTransparency = 1
+        nameTag.Visible = espEnabled
+
+        return espBox, nameTag
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            createESPBox(player)
+        end
+    end
+end
+
+-- Function to create the menu and toggle buttons
+function createMenu()
+    local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
+    local menu = Instance.new("Frame", screenGui)
+    menu.Size = MENU_SIZE
+    menu.Position = UDim2.new(0.5, -MENU_SIZE.X.Offset / 2, 0.5, -MENU_SIZE.Y.Offset / 2)
+    menu.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black background
+    menu.BackgroundTransparency = 0.5
+    menu.Visible = false
+
+    local toggleMenuButton = Instance.new("TextButton", screenGui)
+    toggleMenuButton.Size = BUTTON_SIZE
+    toggleMenuButton.Position = UDim2.new(0, 10, 0.5, -BUTTON_SIZE.Y.Offset / 2)
+    toggleMenuButton.Text = "Toggle Menu"
+    toggleMenuButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green color
+    toggleMenuButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
+    toggleMenuButton.MouseButton1Click:Connect(function()
+        menu.Visible = not menu.Visible
+    end)
+
+    local aimlockButton = Instance.new("TextButton", menu)
+    aimlockButton.Size = BUTTON_SIZE
+    aimlockButton.Position = UDim2.new(0, 10, 0, 10)
+    aimlockButton.Text = "Toggle Aimlock"
+    aimlockButton.BackgroundColor3 = Color3.fromRGB(0, 255, 0) -- Green color
+    aimlockButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
+    aimlockButton.MouseButton1Click:Connect(function()
         aimlockEnabled = not aimlockEnabled
         fovCircle.Visible = aimlockEnabled
         print("Aimlock " .. (aimlockEnabled and "enabled" or "disabled"))
+    end)
+
+    local espButton = Instance.new("TextButton", menu)
+    espButton.Size = BUTTON_SIZE
+    espButton.Position = UDim2.new(0, 10, 0, 60)
+    espButton.Text = "Toggle ESP"
+    espButton.BackgroundColor3 = Color3.fromRGB(0, 0, 255) -- Blue color
+    espButton.TextColor3 = Color3.fromRGB(255, 255, 255) -- White text
+    espButton.MouseButton1Click:Connect(function()
+        espEnabled = not espEnabled
+        for _, child in pairs(screenGui:GetChildren()) do
+            if child:IsA("Frame") and child ~= menu then
+                child.Visible = espEnabled
+            end
+        end
+        print("ESP " .. (espEnabled and "enabled" or "disabled"))
     end)
 end
 
@@ -97,9 +158,10 @@ function updateAimlock()
     end
 end
 
--- Initialize the FOV circle and the toggle button
+-- Initialize components
 createFOVCircle()
-createToggleButton()
+createESP()
+createMenu()
 
 -- Continuous aimlock and shooting logic
 RunService.RenderStepped:Connect(function()
