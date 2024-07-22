@@ -1,64 +1,84 @@
 -- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 -- Configuration
-local ESPColor = Color3.fromRGB(255, 0, 0) -- Red color for outlines
-local NameColors = {Color3.fromRGB(255, 0, 0), Color3.fromRGB(0, 255, 0), Color3.fromRGB(0, 0, 255), Color3.fromRGB(255, 255, 0)} -- Different colors for names
-local NAME_SCALE = UDim2.new(0, 100, 0, 20) -- Size for name tags
-local NAME_OFFSET = Vector3.new(0, 3, 0) -- Offset for name tags
+local SPEED = 30
+local ANIMATION_ID = "rbxassetid://507766666" -- Replace with a superhero running animation ID
+local SPARK_COLOR = Color3.fromRGB(255, 215, 0) -- Yellow color for sparks
 
--- Function to create ESP for a player
-local function createESP(player)
-    local character = player.Character
-    if character then
-        -- Create an outline for the entire character
-        local outline = Instance.new("Highlight")
-        outline.Name = "ESPOutline"
-        outline.FillTransparency = 1
-        outline.OutlineColor = ESPColor
-        outline.Parent = character
+-- Local player
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
 
-        if not character:FindFirstChild("ESPNameTag") then
-            -- Create a billboard for the player's name
-            local billBoard = Instance.new("BillboardGui", character)
-            billBoard.Name = "ESPNameTag"
-            billBoard.Size = NAME_SCALE
-            billBoard.Adornee = character:FindFirstChild("Head")
-            billBoard.AlwaysOnTop = true
-            billBoard.StudsOffset = NAME_OFFSET
-
-            local nameLabel = Instance.new("TextLabel", billBoard)
-            nameLabel.Size = UDim2.new(1, 0, 1, 0)
-            nameLabel.BackgroundTransparency = 1
-            nameLabel.Text = player.Name
-            nameLabel.TextColor3 = NameColors[math.random(1, #NameColors)]
-            nameLabel.TextScaled = true
-            nameLabel.Font = Enum.Font.SourceSansBold
-            nameLabel.TextSize = 8 -- Smaller text size
-        end
-    end
+-- Function to create spark effect
+local function createSpark()
+    local spark = Instance.new("ParticleEmitter")
+    spark.Texture = "rbxassetid://243660364" -- Replace with your desired spark texture
+    spark.Color = ColorSequence.new(SPARK_COLOR)
+    spark.Size = NumberSequence.new(0.5)
+    spark.Rate = 100
+    spark.Lifetime = NumberRange.new(0.2, 0.5)
+    spark.Speed = NumberRange.new(5, 10)
+    spark.Acceleration = Vector3.new(0, -10, 0)
+    spark.Parent = character.PrimaryPart
+    return spark
 end
 
--- Create ESP for existing players
-for _, player in pairs(Players:GetPlayers()) do
-    if player ~= Players.LocalPlayer then
-        player.CharacterAdded:Connect(function()
-            wait(1) -- Wait for character to load
-            createESP(player)
-        end)
-        if player.Character then
-            createESP(player)
+-- Load and play the running animation
+local animation = Instance.new("Animation")
+animation.AnimationId = ANIMATION_ID
+local animationTrack = humanoid:LoadAnimation(animation)
+
+-- Start/Stop running animation and effects based on movement state
+humanoid.Running:Connect(function(speed)
+    if speed > 0 then
+        humanoid.WalkSpeed = SPEED
+        if not animationTrack.IsPlaying then
+            animationTrack:Play()
+        end
+        if not character:FindFirstChild("SparkEffect") then
+            local spark = createSpark()
+            spark.Name = "SparkEffect"
+        end
+    else
+        humanoid.WalkSpeed = 16
+        if animationTrack.IsPlaying then
+            animationTrack:Stop()
+        end
+        if character:FindFirstChild("SparkEffect") then
+            character.SparkEffect:Destroy()
         end
     end
-end
+end)
 
--- Create ESP for new players
-Players.PlayerAdded:Connect(function(player)
-    if player ~= Players.LocalPlayer then
-        player.CharacterAdded:Connect(function()
-            wait(1) -- Wait for character to load
-            createESP(player)
-        end)
-    end
+-- Handle character respawn
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoid = newCharacter:WaitForChild("Humanoid")
+
+    -- Reapply the speed script after respawn
+    humanoid.Running:Connect(function(speed)
+        if speed > 0 then
+            humanoid.WalkSpeed = SPEED
+            if not animationTrack.IsPlaying then
+                animationTrack:Play()
+            end
+            if not character:FindFirstChild("SparkEffect") then
+                local spark = createSpark()
+                spark.Name = "SparkEffect"
+            end
+        else
+            humanoid.WalkSpeed = 16
+            if animationTrack.IsPlaying then
+                animationTrack:Stop()
+            end
+            if character:FindFirstChild("SparkEffect") then
+                character.SparkEffect:Destroy()
+            end
+        end
+    end)
 end)
