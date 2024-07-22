@@ -1,63 +1,49 @@
--- Function to create a random color
-function getRandomColor()
-    return Color3.new(math.random(), math.random(), math.random())
+-- Create the FOV circle
+local fovCircle = Drawing.new("Circle")
+fovCircle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+fovCircle.Radius = 100 -- Adjust the radius as needed
+fovCircle.Thickness = 2
+fovCircle.Color = Color3.new(1, 0, 0) -- Red color
+fovCircle.Filled = false
+fovCircle.Visible = true
+
+-- Function to get the closest player within the FOV circle
+function getClosestPlayerInFOV()
+    local players = game.Players:GetPlayers()
+    local localPlayer = game.Players.LocalPlayer
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+
+    for _, player in pairs(players) do
+        if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
+            local fovCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+            local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - fovCenter).magnitude
+
+            if distance < fovCircle.Radius and distance < shortestDistance then
+                closestPlayer = player
+                shortestDistance = distance
+            end
+        end
+    end
+
+    return closestPlayer
 end
 
--- Create the ESP outline function
-function createESP(player)
-    -- Outline part
-    local espOutline = Instance.new("Highlight")
-    espOutline.Name = "ESPOutline"
-    espOutline.Adornee = player.Character
-    espOutline.FillTransparency = 1
-    espOutline.OutlineTransparency = 0
-    espOutline.OutlineColor = Color3.new(1, 0, 0) -- Red color
-    espOutline.Parent = player.Character
-
-    -- Name tag part
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Name = "ESPName"
-    billboardGui.Adornee = player.Character.Head
-    billboardGui.Size = UDim2.new(0, 100, 0, 20) -- Smaller size
-    billboardGui.StudsOffset = Vector3.new(0, 3, 0)
-    billboardGui.AlwaysOnTop = true
-
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = player.Name
-    textLabel.TextColor3 = getRandomColor() -- Random color for each name
-    textLabel.TextScaled = true
-    textLabel.TextSize = 14
-    textLabel.Parent = billboardGui
-
-    billboardGui.Parent = player.Character.Head
-end
-
--- Apply ESP to all players
-function applyESPToAllPlayers()
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player ~= game.Players.LocalPlayer and player.Character then
-            createESP(player)
+-- Function to adjust bullet direction
+function silentAim()
+    local target = getClosestPlayerInFOV()
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local bullet = workspace:FindFirstChild("Bullet") -- Adjust according to the game's bullet object
+        if bullet then
+            bullet.CFrame = CFrame.new(bullet.Position, target.Character.HumanoidRootPart.Position)
         end
     end
 end
 
--- Listen for new players joining
-game.Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        wait(1) -- Give time for character to load
-        createESP(player)
-    end)
+-- Listen for when a bullet is fired
+workspace.ChildAdded:Connect(function(child)
+    if child.Name == "Bullet" then -- Adjust according to the game's bullet object
+        silentAim()
+    end
 end)
-
--- Listen for characters being added to existing players
-for _, player in pairs(game.Players:GetPlayers()) do
-    player.CharacterAdded:Connect(function(character)
-        wait(1) -- Give time for character to load
-        createESP(player)
-    end)
-end
-
--- Initial ESP application
-applyESPToAllPlayers()
