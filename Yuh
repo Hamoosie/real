@@ -19,14 +19,14 @@ function createFOVCircle()
     fovCircle = Instance.new("Frame", screenGui)
     fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
     fovCircle.Position = UDim2.new(0.5, -FOV_RADIUS, 0.5, -FOV_RADIUS)
-    fovCircle.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red color for FOV circle
-    fovCircle.BackgroundTransparency = 0.5
-    fovCircle.BorderSizePixel = 0
+    fovCircle.BackgroundTransparency = 1
+    fovCircle.BorderSizePixel = 2
+    fovCircle.BorderColor3 = Color3.fromRGB(255, 0, 0) -- Red color for FOV circle
     fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
     
-    -- Create a circular shape
-    local mask = Instance.new("UICorner", fovCircle)
-    mask.CornerRadius = UDim.new(0.5, 0) -- Circular shape
+    -- Create a circular shape with UICorner
+    local corner = Instance.new("UICorner", fovCircle)
+    corner.CornerRadius = UDim.new(0.5, 0) -- Circular shape
 end
 
 -- Function to create the enable/disable button
