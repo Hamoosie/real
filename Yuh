@@ -1,3 +1,5 @@
+local UIS = game:GetService("UserInputService")
+
 -- Create the FOV circle
 local fovCircle = Drawing.new("Circle")
 fovCircle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
@@ -7,7 +9,31 @@ fovCircle.Color = Color3.new(1, 0, 0) -- Red color
 fovCircle.Filled = false
 fovCircle.Visible = true
 
--- Function to get the closest player within the FOV circle
+-- Maximum distance for targeting
+local maxDistance = 200 -- Adjust as needed
+
+-- Toggle state
+local silentAimEnabled = true
+
+-- Create a toggle button
+local screenGui = Instance.new("ScreenGui")
+local toggleButton = Instance.new("TextButton")
+
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+toggleButton.Size = UDim2.new(0, 100, 0, 50)
+toggleButton.Position = UDim2.new(0, 10, 0.5, -25) -- Left side of the screen
+toggleButton.BackgroundColor3 = Color3.new(0, 0, 0)
+toggleButton.TextColor3 = Color3.new(1, 1, 1)
+toggleButton.Text = "Toggle Silent Aim"
+toggleButton.Parent = screenGui
+
+toggleButton.MouseButton1Click:Connect(function()
+    silentAimEnabled = not silentAimEnabled
+    toggleButton.Text = silentAimEnabled and "Disable Silent Aim" or "Enable Silent Aim"
+end)
+
+-- Function to get the closest player within the FOV circle and distance
 function getClosestPlayerInFOV()
     local players = game.Players:GetPlayers()
     local localPlayer = game.Players.LocalPlayer
@@ -16,11 +42,14 @@ function getClosestPlayerInFOV()
 
     for _, player in pairs(players) do
         if player ~= localPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
+            local character = player.Character
+            local humanoidRootPart = character.HumanoidRootPart
+            local screenPoint = workspace.CurrentCamera:WorldToScreenPoint(humanoidRootPart.Position)
             local fovCenter = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
             local distance = (Vector2.new(screenPoint.X, screenPoint.Y) - fovCenter).magnitude
+            local actualDistance = (localPlayer.Character.HumanoidRootPart.Position - humanoidRootPart.Position).magnitude
 
-            if distance < fovCircle.Radius and distance < shortestDistance then
+            if distance < fovCircle.Radius and distance < shortestDistance and actualDistance <= maxDistance then
                 closestPlayer = player
                 shortestDistance = distance
             end
@@ -32,11 +61,13 @@ end
 
 -- Function to adjust aiming direction
 function silentAim()
-    local target = getClosestPlayerInFOV()
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
-        local targetPos = target.Character.HumanoidRootPart.Position
-        local cam = workspace.CurrentCamera
-        cam.CFrame = CFrame.new(cam.CFrame.Position, targetPos)
+    if silentAimEnabled then
+        local target = getClosestPlayerInFOV()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local targetPos = target.Character.HumanoidRootPart.Position
+            local cam = workspace.CurrentCamera
+            cam.CFrame = CFrame.new(cam.CFrame.Position, targetPos)
+        end
     end
 end
 
