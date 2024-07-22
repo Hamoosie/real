@@ -1,9 +1,11 @@
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local workspace = game:GetService("Workspace")
 
 -- Tool name
 local TOOL_NAME = "AimlockTool"
+local MAX_DISTANCE = 100 -- Maximum distance for locking onto players
 
 -- Variables for the locked target and tool management
 local lockedTarget = nil
@@ -32,10 +34,15 @@ end
 -- Function to get the player at the touch position
 function getPlayerAtTouch(touchPosition)
     local mouse = Players.LocalPlayer:GetMouse()
-    local screenPoint = Vector2.new(touchPosition.X, touchPosition.Y)
-    local target = workspace:FindPartOnRay(workspace.CurrentCamera:ScreenPointToRay(screenPoint.X, screenPoint.Y), workspace)
+    local ray = workspace.CurrentCamera:ScreenPointToRay(touchPosition.X, touchPosition.Y)
+    local target, position = workspace:FindPartOnRay(ray, workspace)
+    
     if target and target.Parent and target.Parent:FindFirstChild("Humanoid") then
-        return Players:GetPlayerFromCharacter(target.Parent)
+        local character = target.Parent
+        local distance = (workspace.CurrentCamera.CFrame.Position - character.HumanoidRootPart.Position).magnitude
+        if distance <= MAX_DISTANCE then
+            return Players:GetPlayerFromCharacter(character)
+        end
     end
     return nil
 end
@@ -67,6 +74,9 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
                 end
                 if player then
                     lockOnToPlayer(player)
+                    print("Locked onto player:", player.Name)
+                else
+                    print("No player found within distance at touch position.")
                 end
             end
         end
@@ -81,6 +91,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
         if aimlockTool then
             if lockedTarget then
                 clearLock()
+                print("Lock cleared.")
             end
         end
     end
