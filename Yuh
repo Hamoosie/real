@@ -52,6 +52,8 @@ function lockOnToPlayer(player)
     if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
         lockedTarget = player
         print("Locked onto player:", player.Name)
+    else
+        print("Failed to lock onto player:", player)
     end
 end
 
