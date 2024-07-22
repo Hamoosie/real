@@ -1,120 +1,126 @@
-local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
 
--- Tool name
-local TOOL_NAME = "AimlockTool"
+-- Configuration
+local FOV_RADIUS = 100 -- Radius of the FOV circle
 local MAX_DISTANCE = 100 -- Maximum distance for locking onto players
 
--- Variables for the locked target and tool management
+-- Variables
 local lockedTarget = nil
-local aimlockTool = nil
+local fovCircle = nil
 local aimlockEnabled = true -- Set to true to enable by default
 
--- Function to create a new aimlock tool
-function createAimlockTool()
-    local tool = Instance.new("Tool")
-    tool.Name = TOOL_NAME
-    tool.RequiresHandle = true
-    tool.CanBeDropped = false
-    
-    local handle = Instance.new("Part")
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(1, 1, 1) -- Adjust size as needed
-    handle.Anchored = false
-    handle.CanCollide = false
-    handle.Parent = tool
-    
-    tool.Parent = Players.LocalPlayer.Backpack
-    print("Tool created and added to backpack.")
-    return tool
+-- Function to create the FOV circle
+function createFOVCircle()
+    local screenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
+    fovCircle = Instance.new("Frame", screenGui)
+    fovCircle.Size = UDim2.new(0, FOV_RADIUS * 2, 0, FOV_RADIUS * 2)
+    fovCircle.Position = UDim2.new(0.5, -FOV_RADIUS, 0.5, -FOV_RADIUS)
+    fovCircle.BackgroundColor3 = Color3.fromRGB(255, 0, 0) -- Red color for FOV circle
+    fovCircle.BackgroundTransparency = 0.5
+    fovCircle.BorderSizePixel = 0
+    fovCircle.Visible = aimlockEnabled
 end
 
--- Function to get the player at the touch position
-function getPlayerAtTouch(touchPosition)
+-- Function to get the player within the FOV circle
+function getPlayerInFOV()
     local cam = workspace.CurrentCamera
-    local ray = cam:ScreenPointToRay(touchPosition.X, touchPosition.Y)
-    local target, position = workspace:FindPartOnRay(ray, workspace)
+    local mousePos = UIS:GetMouseLocation()
+    local playersInFOV = {}
 
-    if target and target.Parent and target.Parent:FindFirstChild("Humanoid") then
-        local character = target.Parent
-        local distance = (cam.CFrame.Position - character.HumanoidRootPart.Position).magnitude
-        if distance <= MAX_DISTANCE then
-            return Players:GetPlayerFromCharacter(character)
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local charPos = cam:WorldToScreenPoint(player.Character.HumanoidRootPart.Position)
+            local dist = (Vector2.new(charPos.X, charPos.Y) - mousePos).Magnitude
+
+            if dist <= FOV_RADIUS then
+                local distanceToPlayer = (cam.CFrame.Position - player.Character.HumanoidRootPart.Position).magnitude
+                if distanceToPlayer <= MAX_DISTANCE then
+                    table.insert(playersInFOV, {player = player, distance = distanceToPlayer})
+                end
+            end
         end
     end
+
+    table.sort(playersInFOV, function(a, b) return a.distance < b.distance end)
+
+    if #playersInFOV > 0 then
+        return playersInFOV[1].player
+    end
+
     return nil
 end
 
--- Function to lock onto a player
-function lockOnToPlayer(player)
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        lockedTarget = player
-        print("Locked onto player:", player.Name)
-    else
-        print("Failed to lock onto player:", player)
+-- Function to manipulate bullet trajectory
+function manipulateBullet(bullet, targetPosition)
+    -- Calculate direction to the target
+    local direction = (targetPosition - bullet.Position).unit
+    -- Set bullet's direction to the target
+    bullet.Velocity = direction * bullet.Velocity.Magnitude
+end
+
+-- Function to handle shooting
+function onShoot()
+    if aimlockEnabled and lockedTarget then
+        local targetPosition = lockedTarget.Character.HumanoidRootPart.Position
+        -- Intercept and manipulate bullets
+        for _, bullet in ipairs(workspace:FindPartsInRegion3(workspace.CurrentCamera.CFrame:ToWorldSpace(CFrame.new(targetPosition)).Position, Vector3.new(100, 100, 100), nil)) do
+            if bullet:IsA("BallSocketConstraint") then
+                manipulateBullet(bullet, targetPosition)
+            end
+        end
     end
 end
 
--- Function to clear the locked target
-function clearLock()
-    lockedTarget = nil
-    print("Lock cleared.")
+-- Function to update aimlock
+function updateAimlock()
+    if aimlockEnabled and not lockedTarget then
+        local target = getPlayerInFOV()
+        if target then
+            lockedTarget = target
+            print("Locked onto player:", lockedTarget.Name)
+        end
+    elseif not aimlockEnabled then
+        lockedTarget = nil
+    end
 end
 
--- Handle touch and mouse input
+-- Toggle aimlock with a button press (e.g., Left Mouse Button)
 UIS.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if aimlockTool and aimlockEnabled then
-            local player
-            if input.UserInputType == Enum.UserInputType.Touch then
-                player = getPlayerAtTouch(input.Position)
+
+    if input.UserInputType == Enum.UserInputType.Touch then
+        -- Detect touch input for aimlock toggle
+        local touchPos = UIS:GetTouchPositions()
+        if #touchPos > 0 then
+            local touch = touchPos[1]
+            if touch.Position.X < workspace.CurrentCamera.ViewportSize.X / 2 then
+                -- Toggle aimlock on/off with a touch on the left side of the screen
+                if not aimlockEnabled then
+                    aimlockEnabled = true
+                    fovCircle.Visible = true
+                    print("Aimlock enabled.")
+                else
+                    aimlockEnabled = false
+                    fovCircle.Visible = false
+                    print("Aimlock disabled.")
+                end
             else
-                player = getPlayerAtTouch(Players.LocalPlayer:GetMouse().Hit.Position)
-            end
-            if player then
-                lockOnToPlayer(player)
-            else
-                print("No player found within distance at touch position.")
+                -- Clear lock with a touch on the right side of the screen
+                lockedTarget = nil
+                print("Lock cleared.")
             end
         end
     end
 end)
 
--- Handle clearing the lock
-UIS.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton2 then
-        if aimlockTool and lockedTarget then
-            clearLock()
-        end
-    end
-end)
+-- Initialize the FOV circle
+createFOVCircle()
 
--- Function to adjust aiming direction with prediction
-function aimlock()
-    if lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local cam = workspace.CurrentCamera
-        local targetPos = lockedTarget.Character.HumanoidRootPart.Position
-        local predictedPos = targetPos -- Add prediction logic here if needed
-        cam.CFrame = CFrame.new(cam.CFrame.Position, predictedPos)
-    end
-end
-
--- Initialize the tool and aimlock
-aimlockTool = Players.LocalPlayer.Backpack:FindFirstChild(TOOL_NAME)
-if not aimlockTool then
-    print("Tool not found in backpack, creating...")
-    aimlockTool = createAimlockTool()
-else
-    print("Tool found in backpack.")
-end
-
--- Continuous aimlock
+-- Continuous aimlock and bullet manipulation
 RunService.RenderStepped:Connect(function()
-    aimlock()
+    updateAimlock()
+    onShoot()
 end)
